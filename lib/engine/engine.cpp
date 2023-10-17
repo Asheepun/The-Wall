@@ -580,7 +580,7 @@ int main(){
 	
 	}
 
-	Engine_finnish();
+	Engine_finish();
 
 	return 0;
 
@@ -601,14 +601,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
-	wc.lpszClassName = CLASS_NAME;
+	wc.lpszClassName = (LPCSTR) CLASS_NAME;
 	
 	RegisterClass(&wc);
 	
 	hwnd = CreateWindowEx(
 		0,
-		CLASS_NAME,
-		"Untitled Engine Program",
+		(LPCSTR)CLASS_NAME,
+		(LPCSTR)"Untitled Engine Program",
 		WS_OVERLAPPEDWINDOW,
 
 		CW_USEDEFAULT,
@@ -745,7 +745,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	}
 
-	Engine_finnish();
+	Engine_finish();
 	
 	return 0;
 	

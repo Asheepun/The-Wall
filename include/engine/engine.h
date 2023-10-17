@@ -148,7 +148,7 @@ void Engine_update(float);
 
 void Engine_draw();
 
-void Engine_finnish();
+void Engine_finish();
 
 void Engine_quit();
 
