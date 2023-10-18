@@ -6,6 +6,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "math.h"
+#include <iostream>
 
 #include <vector>
 #include <chrono>
@@ -736,12 +737,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Engine_elapsedFrames++;
 
 		QueryPerformanceCounter(&liStop);
-
-		deltaTime = (float)((liStop.QuadPart - liStart.QuadPart) * 1000000 / liFrequency.QuadPart) / 1000;
+		//std::cout << "liStop.QuadPart: " + (int)liStop.QuadPart;
+		//std::cout << "\nliStart.QuadPart: " + liStart.QuadPart;
+		//std::cout << "liFrequency.QuadPart: " + liStop.QuadPart;
+		//std::cout << "\n----\n";
+		deltaTime = (float)((liStop.QuadPart - liStart.QuadPart) * 1000000.0 / (double)liFrequency.QuadPart) / 1000.0;
 
 		accumilatedTime += deltaTime;
 		
-		//printf("%f\n", deltaTime);
+		//printf("%f\n", deltaTime);;
 
 	}
 
