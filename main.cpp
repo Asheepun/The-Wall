@@ -38,6 +38,10 @@ void Collide_Droplet(int ind1,int ind2,float tension,float size,float reach)
 {
     float dx = X[ind2] - X[ind1];
     float dy = Y[ind2] - Y[ind1];
+    /*if (fabsf(dy)<0.1)
+    {
+        dy = 0.1;
+    }*/
     float dist2 = dx*dx + dy*dy;
     if (dist2 >= size*size*(1+reach)*(1+reach))
     {
@@ -138,7 +142,27 @@ void Engine_update(float deltaTime){
         {
             Collide_Droplet(i,j,waterTension,dropletSize,dropletReach);
         }
+        if (X[i] < dropletSize + dropletReach)
+        {
+            AX[i] += (dropletSize - X[i])*waterTension;
+        }
+        
+        if (X[i] > (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize - dropletReach)
+        {
+            AX[i] -= (X[i]-((float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize))*waterTension;
+        }
+        if (Y[i] < dropletSize + dropletReach)
+        {
+            AY[i] += (dropletSize - Y[i])*waterTension;
+        }
+        if (Y[i] > (float)ROOM_HEIGHT/PIXELS_PER_METER - dropletSize - dropletReach)
+        {
+            AY[i] -= (Y[i]-((float)ROOM_HEIGHT/PIXELS_PER_METER - dropletSize))*waterTension;
+        }
+
+        
     }
+
 
 
     //Update Velocities
