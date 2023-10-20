@@ -8,7 +8,7 @@
 #define CELL_ROWS 40
 #define CELL_COLS 80
 #define CELL_MAX_PARTICLES 5
-#define PART_NBR 500
+#define PART_NBR 200
 
 //extern int Engin
 
@@ -34,7 +34,7 @@ byte PREV_ROW[PART_NBR] = {0};
 byte PREV_COL[PART_NBR] = {0};
 
 float waterMass = 1;
-float waterRad = 0.5;
+float waterRad = 0.2;
 float PIXELS_PER_METER = 50;
 float g = 9.82;
 float waterTension = 50;
@@ -89,8 +89,9 @@ void Spring_UpdateMass(int ind1, int ind2,float size)
     float k = (PARTS[ind1].p / PARTS[ind2].p);
     float m = PARTS[ind1].m + PARTS[ind2].m;
 
-    PARTS[ind2].m = m/(1 + k);
-    PARTS[ind1].m = m/(1 + 1/k);
+    float dm = (m/(1 + k) - PARTS[ind2].m )/10;
+    PARTS[ind1].m -= dm;
+    PARTS[ind2].m += dm;
 }
 
 void Spring_CollideWall(int i)
