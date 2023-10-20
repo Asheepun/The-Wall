@@ -12,32 +12,39 @@
 
 //extern int Engin
 
+struct Particle
+{
+    float x;
+    float y;
+    float vx;
+    float vy;
+    float ax;
+    float ay;
+    float m;
+    float p;
+};
 
 Renderer2D_Renderer renderer = Renderer2D_Renderer();
 
 byte gridTracker[CELL_ROWS][CELL_COLS][CELL_MAX_PARTICLES] = {0};
 
-float X[PART_NBR] = {0.0f};
-float Y[PART_NBR] = {0.0f};
-float VX[PART_NBR] = {0.0f};
-float VY[PART_NBR] = {0.0f};
-float AX[PART_NBR] = {0.0f};
-float AY[PART_NBR] = {0.0f};
+Particle PARTS[PART_NBR];
+
 byte PREV_ROW[PART_NBR] = {0};
 byte PREV_COL[PART_NBR] = {0};
 
 float waterMass = 1;
-float waterRad = 0.1;
+float waterRad = 0.5;
 float PIXELS_PER_METER = 50;
 float g = 9.82;
 float waterTension = 50;
 float dropletSize = 2;
 float dropletReach = 0.2;
 
-void Collide_Droplet(int ind1,int ind2,float tension,float size,float reach)
+void Spring_Collide(int ind1,int ind2,float tension,float size,float reach)
 {
-    float dx = X[ind2] - X[ind1];
-    float dy = Y[ind2] - Y[ind1];
+    float dx = PARTS[ind2].x - PARTS[ind1].x;
+    float dy = PARTS[ind2].y - PARTS[ind1].y;
     /*if (fabsf(dy)<0.1)
     {
         dy = 0.1;
@@ -53,29 +60,73 @@ void Collide_Droplet(int ind1,int ind2,float tension,float size,float reach)
     {
         return;
     }
-    float a = delta*tension;
-    if (a>0)
+    float f = delta*tension;
+    if (f>0)
     {
-        a*=0.1;
+        f*=0.1;
     }
     float cosv = dx/dist;
     float sinv = dy/dist;
-    float ax = a*cosv;
-    float ay = a*sinv;
-    AX[ind1] += ax;
-    AX[ind2] -= ax;
-    AY[ind1] += ay;
-    AY[ind2] -= ay;
+    float fx = f*cosv;
+    float fy = f*sinv;
+    PARTS[ind1].ax += fx/PARTS[ind1].m;
+    PARTS[ind2].ax -= fx/PARTS[ind2].m;
+    PARTS[ind1].ay += fy/PARTS[ind1].m;
+    PARTS[ind2].ay -= fy/PARTS[ind2].m;
+    PARTS[ind1].p += fabsf(f);
+    PARTS[ind2].p += fabsf(f);
+}
+
+void Spring_UpdateMass(int ind1, int ind2,float size)
+{
+    float dx = PARTS[ind2].x - PARTS[ind1].x;
+    float dy = PARTS[ind2].y - PARTS[ind1].y;
+    float dist2 = dx*dx + dy*dy;
+    if (dist2 >= size*size)
+    {
+        return;
+    }
+    float k = (PARTS[ind1].p / PARTS[ind2].p);
+    float m = PARTS[ind1].m + PARTS[ind2].m;
+
+    PARTS[ind2].m = m/(1 + k);
+    PARTS[ind1].m = m/(1 + 1/k);
+}
+
+void Spring_CollideWall(int i)
+{
+    if (PARTS[i].x < dropletSize + dropletReach && PARTS[i].x > dropletSize)
+        {
+            PARTS[i].ax += (dropletSize - PARTS[i].x)*waterTension;
+        }
+        
+        if (PARTS[i].x > (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize - dropletReach && PARTS[i].x < (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize)
+        {
+            PARTS[i].ax -= (PARTS[i].x-((float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize))*waterTension;
+        }
+        if (PARTS[i].y < dropletSize + dropletReach)
+        {
+            PARTS[i].ay += (dropletSize - PARTS[i].y)*waterTension;
+        }
+        if (PARTS[i].y > (float)ROOM_HEIGHT/PIXELS_PER_METER - dropletSize - dropletReach)
+        {
+            PARTS[i].ay -= (PARTS[i].y-((float)ROOM_HEIGHT/PIXELS_PER_METER - dropletSize))*waterTension;
+        }
 }
 
 void Engine_start(){
     Renderer2D_init(&renderer,ROOM_WIDTH,ROOM_HEIGHT);
     for(int i = 0; i < PART_NBR;i++)
     {
-        X[i] = ROOM_WIDTH*((float)i)/PART_NBR/PIXELS_PER_METER;
-        Y[i] = ROOM_HEIGHT*((float)rand())/RAND_MAX/PIXELS_PER_METER;
-        VX[i] = 0;
-        VY[i] = 0;
+        
+        PARTS[i].x = ROOM_WIDTH*((float)i)/PART_NBR/PIXELS_PER_METER;
+        PARTS[i].y = ROOM_HEIGHT*((float)rand())/RAND_MAX/PIXELS_PER_METER;
+        PARTS[i].vx = 0;
+        PARTS[i].vy = 0;
+        PARTS[i].ax = 0;
+        PARTS[i].ay = 0;
+        PARTS[i].m = 1.0;
+        PARTS[i].p = 0.0;
     }
 }
 
@@ -84,17 +135,20 @@ void Engine_update(float deltaTime){
     deltaTime = 1.0/60;
     for(int i = 0; i < PART_NBR;i++)
     {
-        AX[i] = 0;
-        AY[i] = 9.82;
+        PARTS[i].ax = 0;
+        PARTS[i].ay = g;
+        PARTS[i].p = g * PARTS[i].m;
     }
     if(Engine_keys[ENGINE_KEY_R].downed)
     {
         for(int i = 0; i < PART_NBR;i++)
         {
-            X[i] = ROOM_WIDTH*((float)i)/PART_NBR/PIXELS_PER_METER;
-            Y[i] = ROOM_HEIGHT*((float)rand())/RAND_MAX/PIXELS_PER_METER;
-            VX[i] = 0;
-            VY[i] = 0;
+            PARTS[i].x = ROOM_WIDTH*((float)i)/PART_NBR/PIXELS_PER_METER;
+            PARTS[i].y = ROOM_HEIGHT*((float)rand())/RAND_MAX/PIXELS_PER_METER;
+            PARTS[i].vx = 0;
+            PARTS[i].vy = 0;
+            PARTS[i].ax = 0;
+            PARTS[i].ay = 0;
         }
     }
 
@@ -144,27 +198,16 @@ void Engine_update(float deltaTime){
     {
         for(int j = i + 1; j < PART_NBR;j++)
         {
-            Collide_Droplet(i,j,waterTension,dropletSize,dropletReach);
+            Spring_Collide(i,j,waterTension,dropletSize,dropletReach);
         }
-        if (X[i] < dropletSize + dropletReach && X[i] > dropletSize)
+        Spring_CollideWall(i);
+    }
+    for(int i = 0; i < PART_NBR;i++)
+    {
+        for(int j = i + 1; j < PART_NBR;j++)
         {
-            AX[i] += (dropletSize - X[i])*waterTension;
+            Spring_UpdateMass(i,j,dropletSize);
         }
-        
-        if (X[i] > (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize - dropletReach && X[i] < (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize)
-        {
-            AX[i] -= (X[i]-((float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize))*waterTension;
-        }
-        if (Y[i] < dropletSize + dropletReach)
-        {
-            AY[i] += (dropletSize - Y[i])*waterTension;
-        }
-        if (Y[i] > (float)ROOM_HEIGHT/PIXELS_PER_METER - dropletSize - dropletReach)
-        {
-            AY[i] -= (Y[i]-((float)ROOM_HEIGHT/PIXELS_PER_METER - dropletSize))*waterTension;
-        }
-
-        
     }
 
 
@@ -172,35 +215,35 @@ void Engine_update(float deltaTime){
     //Update Velocities
     for(int i = 0; i < PART_NBR;i++)
     {
-        VX[i] += AX[i]*deltaTime;
-        VY[i] += AY[i]*deltaTime;
+        PARTS[i].vx += PARTS[i].ax*deltaTime;
+        PARTS[i].vy += PARTS[i].ay*deltaTime;
     }
     //Update Position
     float bounce = 0.5;
     for(int i = 0; i < PART_NBR;i++)
     {
-        X[i] += (VX[i] + AX[i]*deltaTime/2)*deltaTime;
-        Y[i] += (VY[i] + AY[i]*deltaTime/2)*deltaTime;
+        PARTS[i].x += (PARTS[i].vx + PARTS[i].ax*deltaTime/2)*deltaTime;
+        PARTS[i].y += (PARTS[i].vy + PARTS[i].ay*deltaTime/2)*deltaTime;
 
-        if (X[i] + waterRad >= ROOM_WIDTH/(float)PIXELS_PER_METER)
+        if (PARTS[i].x + waterRad >= ROOM_WIDTH/(float)PIXELS_PER_METER)
         {
-            X[i] = ROOM_WIDTH/(float)PIXELS_PER_METER - waterRad;
-            VX[i] = fminf(VX[i],-bounce*VX[i]);
+            PARTS[i].x = ROOM_WIDTH/(float)PIXELS_PER_METER - waterRad;
+            PARTS[i].vx = fminf(PARTS[i].vx,-bounce*PARTS[i].vx);
         }
-        if (X[i] - waterRad <= 0)
+        if (PARTS[i].x - waterRad <= 0)
         {
-            X[i] = waterRad;
-            VX[i] = fmaxf(VX[i],-bounce*VX[i]);
+            PARTS[i].x = waterRad;
+            PARTS[i].vx = fmaxf(PARTS[i].vx,-bounce*PARTS[i].vx);
         }
-        if (Y[i] + waterRad >= ROOM_HEIGHT/(float)PIXELS_PER_METER)
+        if (PARTS[i].y + waterRad >= ROOM_HEIGHT/(float)PIXELS_PER_METER)
         {
-            Y[i] = ROOM_HEIGHT/(float)PIXELS_PER_METER - waterRad;
-            VY[i] = fminf(VY[i],-bounce*VY[i]);
+            PARTS[i].y = ROOM_HEIGHT/(float)PIXELS_PER_METER - waterRad;
+            PARTS[i].vy = fminf(PARTS[i].vy,-bounce*PARTS[i].vy);
         }
-        if (Y[i] - waterRad <= 0)
+        if (PARTS[i].y - waterRad <= 0)
         {
-            Y[i] = waterRad;
-            VY[i] = fmaxf(VY[i],-bounce*VY[i]);
+            PARTS[i].y = waterRad;
+            PARTS[i].vy = fmaxf(PARTS[i].vy,-bounce*PARTS[i].vy);
         }
     }
 
@@ -229,8 +272,8 @@ void Engine_draw(){
     Renderer2D_setColor(&renderer,Vec4f({0.1,0.5,0.3,0.7}));
     for (int i = 0; i < PART_NBR;i++)
     {
-        float xx = (X[i]-waterRad) * PIXELS_PER_METER;
-        float yy = (Y[i]-waterRad) * PIXELS_PER_METER;
+        float xx = (PARTS[i].x-waterRad) * PIXELS_PER_METER;
+        float yy = (PARTS[i].y-waterRad) * PIXELS_PER_METER;
         float dd = 2*waterRad*PIXELS_PER_METER;
         Renderer2D_drawRectangle(&renderer, xx, yy, dd, dd);
     }
