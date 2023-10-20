@@ -8,7 +8,7 @@
 #define CELL_ROWS 40
 #define CELL_COLS 80
 #define CELL_MAX_PARTICLES 5
-#define PART_NBR 100
+#define PART_NBR 500
 
 //extern int Engin
 
@@ -54,6 +54,10 @@ void Collide_Droplet(int ind1,int ind2,float tension,float size,float reach)
         return;
     }
     float a = delta*tension;
+    if (a>0)
+    {
+        a*=0.1;
+    }
     float cosv = dx/dist;
     float sinv = dy/dist;
     float ax = a*cosv;
@@ -142,12 +146,12 @@ void Engine_update(float deltaTime){
         {
             Collide_Droplet(i,j,waterTension,dropletSize,dropletReach);
         }
-        if (X[i] < dropletSize + dropletReach)
+        if (X[i] < dropletSize + dropletReach && X[i] > dropletSize)
         {
             AX[i] += (dropletSize - X[i])*waterTension;
         }
         
-        if (X[i] > (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize - dropletReach)
+        if (X[i] > (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize - dropletReach && X[i] < (float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize)
         {
             AX[i] -= (X[i]-((float)ROOM_WIDTH/PIXELS_PER_METER - dropletSize))*waterTension;
         }
